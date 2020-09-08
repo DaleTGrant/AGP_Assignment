@@ -1,7 +1,10 @@
- Binaries/
- Intermediate/
- Saved/
- *.opensdf
- *.sdf
- *.sln
- *.v12.suo
+Binaries/
+Binaries/*
+Intermediate/
+Intermediate/*
+Saved/
+Saved/*
+*.opensdf
+*.sdf
+*.sln
+*.v12.suo
