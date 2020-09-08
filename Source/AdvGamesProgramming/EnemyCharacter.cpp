@@ -10,6 +10,8 @@ AEnemyCharacter::AEnemyCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	CurrentAgentState = AgentState::PATROL;
+
+	PathfindingAccuracy = 100.0f;
 }
 
 // Called when the game starts or when spawned
@@ -137,7 +139,7 @@ void AEnemyCharacter::MoveAlongPath()
 	if (Path.Num() > 0 && Manager != NULL)
 	{
 		//UE_LOG(LogTemp, Display, TEXT("Current Node: %s"), *CurrentNode->GetName())
-		if ((GetActorLocation() - CurrentNode->GetActorLocation()).IsNearlyZero(1000.0f))
+		if ((GetActorLocation() - CurrentNode->GetActorLocation()).IsNearlyZero(PathfindingAccuracy))
 		{
 			UE_LOG(LogTemp, Display, TEXT("At Node %s"), *CurrentNode->GetName())
 			CurrentNode = Path.Pop();

@@ -54,6 +54,9 @@ public:
 
 	UHealthComponent* HealthComponent;
 
+	UPROPERTY(EditAnywhere)
+	float PathfindingAccuracy;
+
 	UFUNCTION()
 	void AgentPatrol();
 	UFUNCTION()
