@@ -4,6 +4,8 @@ Intermediate/
 Intermediate/*
 Saved/
 Saved/*
+.idea/
+.idea/*
 *.opensdf
 *.sdf
 *.sln
