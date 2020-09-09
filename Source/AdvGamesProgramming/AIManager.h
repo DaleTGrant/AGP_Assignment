@@ -30,6 +30,8 @@ public:
 	int32 NumAI;
 	UPROPERTY(VisibleAnywhere, Category = "Navigation Nodes")
 	TArray<ANavigationNode*> AllNodes;
+	UPROPERTY(VisibleAnywhere, Category = "Navigation Nodes")
+	TArray<ANavigationNode*> AllTraversableNodes;
 	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
 	bool bSteepnessPreventConnection;
 	UPROPERTY(VisibleAnywhere, Category = "Agents")

@@ -102,10 +102,15 @@ TArray<ANavigationNode*> AAIManager::GenerateJPSPath(ANavigationNode* StartNode,
 void AAIManager::PopulateNodes()
 {
 	AllNodes.Empty();
+	AllTraversableNodes.Empty();
 
 	for (TActorIterator<ANavigationNode> It(GetWorld()); It; ++It)
 	{
 		AllNodes.Add(*It);
+		if((*It)->bIsTraversible)
+		{
+			AllTraversableNodes.Add(*It);
+		}
 	}
 }
 
@@ -113,10 +118,10 @@ void AAIManager::CreateAgents()
 {
 	for (int32 i = 0; i < NumAI; i++)
 	{
-		int32 RandIndex = FMath::RandRange(0, AllNodes.Num()-1);
-		AEnemyCharacter* Agent = GetWorld()->SpawnActor<AEnemyCharacter>(AgentToSpawn, AllNodes[RandIndex]->GetActorLocation(), FRotator(0.f, 0.f, 0.f));
+		int32 RandIndex = FMath::RandRange(0, AllTraversableNodes.Num()-1);
+		AEnemyCharacter* Agent = GetWorld()->SpawnActor<AEnemyCharacter>(AgentToSpawn, AllTraversableNodes[RandIndex]->GetActorLocation(), FRotator(0.f, 0.f, 0.f));
 		Agent->Manager = this;
-		Agent->CurrentNode = AllNodes[RandIndex];
+		Agent->CurrentNode = AllTraversableNodes[RandIndex];
 		AllAgents.Add(Agent);
 	}
 }
@@ -124,6 +129,7 @@ void AAIManager::CreateAgents()
 void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int32 Height)
 {
 	AllNodes.Empty();
+	AllTraversableNodes.Empty();
 
 	for (TActorIterator<ANavigationNode> It(GetWorld()); It; ++It)
 	{
@@ -137,7 +143,12 @@ void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int
 			//Create and add the nodes to the AllNodes array.
 			ANavigationNode* Node = GetWorld()->SpawnActor<ANavigationNode>(Vertices[Row * Width + Col], FRotator::ZeroRotator, FActorSpawnParameters());
 			AllNodes.Add(Node);
+			if(Node->bIsTraversible)
+			{
+				AllTraversableNodes.Add(Node);
+			}
 		}
+		
 	}
 
 	for (int32 Col = 0; Col < Width; Col++)
@@ -265,7 +276,7 @@ ANavigationNode* AAIManager::FindNearestNode(const FVector& Location)
 	ANavigationNode* NearestNode = nullptr;
 	float NearestDistance = TNumericLimits<float>::Max();
 	//Loop through the nodes and find the nearest one in distance
-	for (ANavigationNode* CurrentNode : AllNodes)
+	for (ANavigationNode* CurrentNode : AllTraversableNodes)
 	{
 		float CurrentNodeDistance = FVector::Distance(Location, CurrentNode->GetActorLocation());
 		if (CurrentNodeDistance < NearestDistance)
@@ -283,7 +294,7 @@ ANavigationNode* AAIManager::FindFurthestNode(const FVector& Location)
 	ANavigationNode* FurthestNode = nullptr;
 	float FurthestDistance = 0.0f;
 	//Loop through the nodes and find the nearest one in distance
-	for (ANavigationNode* CurrentNode : AllNodes)
+	for (ANavigationNode* CurrentNode : AllTraversableNodes)
 	{
 		float CurrentNodeDistance = FVector::Distance(Location, CurrentNode->GetActorLocation());
 		if (CurrentNodeDistance > FurthestDistance)

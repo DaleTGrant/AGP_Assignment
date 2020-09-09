@@ -20,8 +20,8 @@ ANavigationNode::ANavigationNode()
 	CircleRadius = 50.0f;
 	SegmentCount = 32;
 
-	FinalHeight = 300.0f;
-	FinalWidth = 300.0f;
+	FinalHeight = 250.0f;
+	FinalWidth = 250.0f;
 
 	bIsTraversible = FMath::FRand()>0.1f;
 	
