@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/StaticMeshComponent.h"
 #include "NavigationNode.generated.h"
 
 UCLASS()
@@ -25,6 +26,8 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
 	TArray<ANavigationNode*> ConnectedNodes;
+	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
+	TArray<ANavigationNode*> ConnectedNonTraversableNodes;
 
 	USceneComponent* LocationComponent;
 
@@ -32,5 +35,24 @@ public:
 	float HScore;
 	float FScore();
 
+	UPROPERTY(EditAnywhere, Category="Non-Traversible Parameters")
+	bool bIsTraversible;
+	UPROPERTY(EditAnywhere, Category="Non-Traversible Parameters")
+	float CircleRadius;
+	UPROPERTY(EditAnywhere, Category="Non-Traversible Parameters")
+	int32 SegmentCount;
+
+	UPROPERTY(EditAnywhere, Category="Non-Traversible Parameters")
+	UStaticMeshComponent* BlockerMesh;
+	
 	ANavigationNode* CameFrom;
+
+	void BlockNonTraversable();
+
+	UStaticMesh* CubeMesh;
+
+	UPROPERTY(EditAnywhere)
+	float FinalWidth;
+	UPROPERTY(EditAnywhere)
+	float FinalHeight;
 };

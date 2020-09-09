@@ -30,12 +30,16 @@ public:
 	int32 NumAI;
 	UPROPERTY(VisibleAnywhere, Category = "Navigation Nodes")
 	TArray<ANavigationNode*> AllNodes;
+	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
+	bool bSteepnessPreventConnection;
 	UPROPERTY(VisibleAnywhere, Category = "Agents")
 	TArray<AEnemyCharacter*> AllAgents;
 	UPROPERTY(EditAnywhere, Category = "Agents")
 	TSubclassOf<AEnemyCharacter> AgentToSpawn;
 
 	TArray<ANavigationNode*> GeneratePath(ANavigationNode* StartNode, ANavigationNode* EndNode);
+
+	TArray<ANavigationNode*> GenerateJPSPath(ANavigationNode* StartNode, ANavigationNode* EndNode);
 
 	/**
 	Finds the nearest navigation node from the given location.

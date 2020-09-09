@@ -19,29 +19,6 @@ AProcedurallyGeneratedMap::AProcedurallyGeneratedMap()
 void AProcedurallyGeneratedMap::BeginPlay()
 {
 	Super::BeginPlay();
-	/*
-	TArray<FVector> Vertices;
-	Vertices.Add(FVector(0.0f, 0.0f, 0.0f));
-	Vertices.Add(FVector(0.0f, 100.0f, 0.0f));
-	Vertices.Add(FVector(100.0f, 100.0f, 0.0f));
-	Vertices.Add(FVector(100.0f, 0.0f, 0.0f));
-
-	TArray<int32> Triangles;
-	Triangles.Add(0);
-	Triangles.Add(1);
-	Triangles.Add(3);
-	Triangles.Add(3);
-	Triangles.Add(1);
-	Triangles.Add(2);
-
-	TArray<FVector2D> UVCoords;
-	UVCoords.Add(FVector2D(0.0f, 0.0f));
-	UVCoords.Add(FVector2D(0.0f, 1.0f));
-	UVCoords.Add(FVector2D(1.0f, 1.0f));
-	UVCoords.Add(FVector2D(1.0f, 0.0f));
-
-	MeshComponent->CreateMeshSection(0, Vertices, Triangles, TArray<FVector>(), UVCoords, TArray<FColor>(), TArray<FProcMeshTangent>(), true);
-	*/
 	
 }
 

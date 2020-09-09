@@ -14,6 +14,7 @@ AAIManager::AAIManager()
 	PrimaryActorTick.bCanEverTick = true;
 
 	AllowedAngle = 0.4f;
+	bSteepnessPreventConnection = true;
 }
 
 // Called when the game starts or when spawned
@@ -93,6 +94,11 @@ TArray<ANavigationNode*> AAIManager::GeneratePath(ANavigationNode* StartNode, AN
 	return TArray<ANavigationNode*>();
 }
 
+TArray<ANavigationNode*> AAIManager::GenerateJPSPath(ANavigationNode* StartNode, ANavigationNode* EndNode)
+{
+	return TArray<ANavigationNode*>();
+}
+
 void AAIManager::PopulateNodes()
 {
 	AllNodes.Empty();
@@ -129,7 +135,8 @@ void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int
 		for (int32 Row = 0; Row < Height; Row++)
 		{
 			//Create and add the nodes to the AllNodes array.
-			AllNodes.Add(GetWorld()->SpawnActor<ANavigationNode>(Vertices[Row * Width + Col], FRotator::ZeroRotator, FActorSpawnParameters()));
+			ANavigationNode* Node = GetWorld()->SpawnActor<ANavigationNode>(Vertices[Row * Width + Col], FRotator::ZeroRotator, FActorSpawnParameters());
+			AllNodes.Add(Node);
 		}
 	}
 
@@ -231,11 +238,24 @@ void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int
 
 void AAIManager::AddConnection(ANavigationNode* FromNode, ANavigationNode* ToNode)
 {
-	FVector Direction = FromNode->GetActorLocation() - ToNode->GetActorLocation();
-	Direction.Normalize();
-	if (Direction.Z < AllowedAngle && Direction.Z > AllowedAngle * -1.0f)
+	bool bCanConnect = true;
+	if(bSteepnessPreventConnection)
 	{
-		FromNode->ConnectedNodes.Add(ToNode);
+		FVector Direction = FromNode->GetActorLocation() - ToNode->GetActorLocation();
+		Direction.Normalize();
+		bCanConnect = (Direction.Z < AllowedAngle && Direction.Z > AllowedAngle * -1.0f);
+	}
+	
+	if (bCanConnect)
+	{
+		if(!ToNode->bIsTraversible)
+		{
+			FromNode->ConnectedNonTraversableNodes.Add(ToNode);
+		}
+		else
+		{
+			FromNode->ConnectedNodes.Add(ToNode);
+		}
 	}
 
 }
