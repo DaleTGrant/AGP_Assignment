@@ -2,6 +2,7 @@
 
 
 #include "AIManager.h"
+
 #include "EngineUtils.h"
 #include "EnemyCharacter.h"
 #include "Engine/World.h"
@@ -15,6 +16,9 @@ AAIManager::AAIManager()
 
 	AllowedAngle = 0.4f;
 	bSteepnessPreventConnection = true;
+
+	Heuristic = EHeuristicType::EUCLIDEAN;
+	Pathfinding = EPathfindingType::A_STAR;
 }
 
 // Called when the game starts or when spawned
@@ -35,7 +39,104 @@ void AAIManager::Tick(float DeltaTime)
 
 TArray<ANavigationNode*> AAIManager::GeneratePath(ANavigationNode* StartNode, ANavigationNode* EndNode)
 {
+	if(Pathfinding==EPathfindingType::A_STAR)
+	{
+		return GenerateAStarPath(StartNode,EndNode);
+	}
 
+	if(Pathfinding==EPathfindingType::JPS)
+	{
+		return  GenerateJPSPath(StartNode,EndNode);
+	}
+	
+	UE_LOG(LogTemp, Error, TEXT("NO PATH FOUND"));
+	return TArray<ANavigationNode*>();
+}
+
+TArray<ANavigationNode*> AAIManager::GenerateJPSPath(ANavigationNode* StartNode, ANavigationNode* EndNode)
+{
+	TArray<ANavigationNode*> OpenSet;
+	
+	for (ANavigationNode* Node : AllNodes)
+	{
+		Node->GScore = TNumericLimits<float>::Max();
+	}
+
+	StartNode->GScore = 0;
+	StartNode->HScore = CalculateHeuristic(StartNode->GetActorLocation(), EndNode->GetActorLocation());
+
+	OpenSet.Add(StartNode);
+	
+	while (OpenSet.Num() > 0)
+	{
+		// Get node in openset with lowest F-Score, make it current node, remove from open set
+		int32 IndexLowestFScore = 0;
+		for (int32 i = 1; i < OpenSet.Num(); i++)
+		{
+			if (OpenSet[i]->FScore() < OpenSet[IndexLowestFScore]->FScore())
+			{
+				IndexLowestFScore = i;
+			}
+		}
+		ANavigationNode* CurrentNode = OpenSet[IndexLowestFScore];
+		OpenSet.Remove(CurrentNode);
+
+		// If end goal reached, back trace to start and return path
+		if (CurrentNode == EndNode)
+		{
+			TArray<ANavigationNode*> Path;
+			Path.Push(EndNode);
+			CurrentNode = EndNode;
+			while (CurrentNode != StartNode)
+			{
+				CurrentNode = CurrentNode->CameFrom;
+				Path.Add(CurrentNode);
+			}
+			return Path;
+		}
+
+		// For the current node, identify the neighbours, see if new G-score better than current one
+		
+		for (ANavigationNode* ConnectedNode : CurrentNode->ConnectedNodes)
+		{
+			float TentativeGScore = CurrentNode->GScore + CalculateHeuristic(CurrentNode->GetActorLocation(), ConnectedNode->GetActorLocation());
+			if (TentativeGScore < ConnectedNode->GScore)
+			{
+				ConnectedNode->CameFrom = CurrentNode;
+				ConnectedNode->GScore = TentativeGScore;
+				ConnectedNode->HScore = CalculateHeuristic(ConnectedNode->GetActorLocation(),EndNode->GetActorLocation());
+				if (!OpenSet.Contains(ConnectedNode))
+				{
+					OpenSet.Add(ConnectedNode);
+				}
+			}
+		}
+	}
+	UE_LOG(LogTemp, Error, TEXT("NO PATH FOUND"));
+	return TArray<ANavigationNode*>();
+}
+
+void AAIManager::IdentifyJpsSuccessors(TArray<ANavigationNode*>& OpenSet, ANavigationNode*& CurrentNode, ANavigationNode* EndNode)
+{
+	// // For the current node, identify the neighbours, see if new G-score better than current one
+	// for (ANavigationNode* ConnectedNode : CurrentNode->ConnectedNodes)
+	// {
+	// 	float TentativeGScore = CurrentNode->GScore + CalculateHeuristic(CurrentNode->GetActorLocation(), ConnectedNode->GetActorLocation());
+	// 	if (TentativeGScore < ConnectedNode->GScore)
+	// 	{
+	// 		ConnectedNode->CameFrom = CurrentNode;
+	// 		ConnectedNode->GScore = TentativeGScore;
+	// 		ConnectedNode->HScore = CalculateHeuristic(ConnectedNode->GetActorLocation(),EndNode->GetActorLocation());
+	// 		if (!OpenSet.Contains(ConnectedNode))
+	// 		{
+	// 			OpenSet.Add(ConnectedNode);
+	// 		}
+	// 	}
+	// }
+}
+
+TArray<ANavigationNode*> AAIManager::GenerateAStarPath(ANavigationNode* StartNode, ANavigationNode* EndNode)
+{
 	TArray<ANavigationNode*> OpenSet;
 	for (ANavigationNode* Node : AllNodes)
 	{
@@ -43,7 +144,7 @@ TArray<ANavigationNode*> AAIManager::GeneratePath(ANavigationNode* StartNode, AN
 	}
 
 	StartNode->GScore = 0;
-	StartNode->HScore = FVector::Distance(StartNode->GetActorLocation(), EndNode->GetActorLocation());
+	StartNode->HScore = CalculateHeuristic(StartNode->GetActorLocation(), EndNode->GetActorLocation());
 
 	OpenSet.Add(StartNode);
 
@@ -80,7 +181,7 @@ TArray<ANavigationNode*> AAIManager::GeneratePath(ANavigationNode* StartNode, AN
 			{
 				ConnectedNode->CameFrom = CurrentNode;
 				ConnectedNode->GScore = TentativeGScore;
-				ConnectedNode->HScore = FVector::Distance(ConnectedNode->GetActorLocation(), EndNode->GetActorLocation());
+				ConnectedNode->HScore = CalculateHeuristic(ConnectedNode->GetActorLocation(),EndNode->GetActorLocation());
 				if (!OpenSet.Contains(ConnectedNode))
 				{
 					OpenSet.Add(ConnectedNode);
@@ -94,9 +195,27 @@ TArray<ANavigationNode*> AAIManager::GeneratePath(ANavigationNode* StartNode, AN
 	return TArray<ANavigationNode*>();
 }
 
-TArray<ANavigationNode*> AAIManager::GenerateJPSPath(ANavigationNode* StartNode, ANavigationNode* EndNode)
+float AAIManager::CalculateHeuristic(FVector CurrentNodeLocation, FVector GoalNodeLocation)
 {
-	return TArray<ANavigationNode*>();
+	// Finds the H-Score value between two nodes based on a chosen Heuristic
+	// Euclidean is straightline distance (use for if not on grid)
+	// Octile and Chebyshev are 8-direction grid steps between the nodes (Octile Diagonal cost = sqrt(2), Cheby = 1)
+	if(Heuristic==EHeuristicType::EUCLIDEAN)
+	{
+		return FVector::Distance(CurrentNodeLocation, GoalNodeLocation);
+	}
+
+	if(Heuristic == EHeuristicType::OCTILE || Heuristic == EHeuristicType::CHEBYSHEV)
+	{
+		float D1 = 1.0f; // Horizontal/Vertical Cost
+		float D2 = Heuristic == EHeuristicType::OCTILE ? FMath::Sqrt(2.0f):1.0f; // Diagonal Move cost
+		float Dx = abs(GoalNodeLocation.X - CurrentNodeLocation.X);
+		float Dy = abs(GoalNodeLocation.Y - CurrentNodeLocation.Y);
+		return D1*(Dx+Dy) + (D2-2*D1)*FMath::Min(Dx,Dy); 
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("No Heuristic Set"));
+	return TNumericLimits<float>::Max();
 }
 
 void AAIManager::PopulateNodes()
@@ -143,6 +262,7 @@ void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int
 			//Create and add the nodes to the AllNodes array.
 			ANavigationNode* Node = GetWorld()->SpawnActor<ANavigationNode>(Vertices[Row * Width + Col], FRotator::ZeroRotator, FActorSpawnParameters());
 			AllNodes.Add(Node);
+			Node->GridLocation = FVector2D(Col,Row);
 			if(Node->bIsTraversible)
 			{
 				AllTraversableNodes.Add(Node);
@@ -267,6 +387,11 @@ void AAIManager::AddConnection(ANavigationNode* FromNode, ANavigationNode* ToNod
 		{
 			FromNode->ConnectedNodes.Add(ToNode);
 		}
+		FromNode->AllConnectedNodes.Add(ToNode);
+
+		// For a node, store the directions of all nodes (i.e Right node = (-1,0), Top-Right = (-1,1), etc
+		FVector2D Dir2D = ToNode->GridLocation-FromNode->GridLocation;
+		FromNode->AllConnectedDir.Add(Dir2D);
 	}
 
 }

@@ -28,7 +28,13 @@ public:
 	TArray<ANavigationNode*> ConnectedNodes;
 	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
 	TArray<ANavigationNode*> ConnectedNonTraversableNodes;
-
+	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
+	TArray<ANavigationNode*> AllConnectedNodes;
+	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
+	TArray<FVector2D> AllConnectedDir;
+	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
+	FVector2D GridLocation;
+	
 	USceneComponent* LocationComponent;
 
 	float GScore;

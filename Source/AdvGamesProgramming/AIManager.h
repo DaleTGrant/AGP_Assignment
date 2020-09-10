@@ -9,6 +9,21 @@
 
 class AEnemyCharacter;
 
+UENUM()
+enum class EHeuristicType : uint8 
+{
+	EUCLIDEAN,
+    OCTILE,
+    CHEBYSHEV
+};
+
+UENUM()
+enum class EPathfindingType : uint8 
+{
+	A_STAR,
+    JPS
+};
+
 UCLASS()
 class ADVGAMESPROGRAMMING_API AAIManager : public AActor
 {
@@ -26,6 +41,10 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(EditAnywhere, Category="Pathfinding Properties")
+	EHeuristicType Heuristic;
+	UPROPERTY(EditAnywhere, Category="Pathfinding Properties")
+	EPathfindingType Pathfinding;
 	UPROPERTY(EditAnywhere, Category="AI Properties")
 	int32 NumAI;
 	UPROPERTY(VisibleAnywhere, Category = "Navigation Nodes")
@@ -42,6 +61,9 @@ public:
 	TArray<ANavigationNode*> GeneratePath(ANavigationNode* StartNode, ANavigationNode* EndNode);
 
 	TArray<ANavigationNode*> GenerateJPSPath(ANavigationNode* StartNode, ANavigationNode* EndNode);
+	TArray<ANavigationNode*> GenerateAStarPath(ANavigationNode* StartNode, ANavigationNode* EndNode);
+	float CalculateHeuristic(FVector CurrentLocation, FVector GoalLocation);
+	void IdentifyJpsSuccessors(TArray<ANavigationNode*>& OpenSet, ANavigationNode*& CurrentNode, ANavigationNode* EndNode);
 
 	/**
 	Finds the nearest navigation node from the given location.
