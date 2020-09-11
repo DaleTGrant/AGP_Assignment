@@ -9,13 +9,13 @@
 /**
  * 
  */
-class ADVGAMESPROGRAMMING_API Selector : public Composite
+class ADVGAMESPROGRAMMING_API FSelector : public Composite
 {
 public:
-	Selector();
-	~Selector();
+	FSelector();
+	~FSelector();
 	//virtual void OnInitialise() override;
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 
 	
 	//TCheckedPointerIterator<Node, int>& CurrentChild;

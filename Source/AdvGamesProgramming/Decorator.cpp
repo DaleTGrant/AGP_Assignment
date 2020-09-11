@@ -3,26 +3,26 @@
 
 #include "Decorator.h"
 
-Decorator::Decorator()
+FDecorator::FDecorator()
 {
 }
 
-Decorator::~Decorator()
+FDecorator::~FDecorator()
 {
 }
 
-void Decorator::SetChild(Node Child)
+void FDecorator::SetChild(Node * Child)
 {
-    child = Child;
+    child = *Child;
 }
 
-bool Decorator::HasChild()
+bool FDecorator::HasChild()
 {
     //return child != nullptr;
     return false;
 }
 
-Node::Status Decorator::Update(Blackboard* blackboard)
+Node::EStatus FDecorator::Update(Blackboard* Blackboard)
 {
-    return child.Update(blackboard);
+    return child.Update(Blackboard);
 }

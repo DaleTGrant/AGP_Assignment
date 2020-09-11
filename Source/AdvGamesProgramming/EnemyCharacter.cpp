@@ -32,7 +32,7 @@ void AEnemyCharacter::BeginPlay()
 void AEnemyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
 	if (CurrentAgentState == AgentState::PATROL)
 	{
 		AgentPatrol();
@@ -73,6 +73,7 @@ void AEnemyCharacter::Tick(float DeltaTime)
 			Path.Empty();
 		}
 	}
+	
 	MoveAlongPath();
 }
 

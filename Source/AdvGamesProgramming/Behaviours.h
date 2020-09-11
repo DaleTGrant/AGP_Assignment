@@ -11,37 +11,42 @@
  * This file stores specific behaviours required for the enemy AI
  */
 
-class ADVGAMESPROGRAMMING_API Charge : public Node
+class ADVGAMESPROGRAMMING_API FCharge : public Node
 {
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 };
 
-class ADVGAMESPROGRAMMING_API Retreat : public Node
+class ADVGAMESPROGRAMMING_API FRetreat : public Node
 {
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 	
 };
 
-class ADVGAMESPROGRAMMING_API PlayerCheck : public Node
+class ADVGAMESPROGRAMMING_API FPlayerCheck : public Node
 {
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 	
 };
 /*
 class ADVGAMESPROGRAMMING_API Shoot : public Node
 {
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 	
 };
 */
-class ADVGAMESPROGRAMMING_API HealthCheck : public Decorator
+class ADVGAMESPROGRAMMING_API FHealthCheck : public FDecorator
 {
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 	
 };
 
-class ADVGAMESPROGRAMMING_API Repeater : public Decorator
+class ADVGAMESPROGRAMMING_API FRepeater : public FDecorator
 {
-	virtual Status Update(Blackboard* blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 	
+};
+
+class ADVGAMESPROGRAMMING_API FPatrol : public Node
+{
+	virtual EStatus Update(Blackboard* Blackboard) override;
 };

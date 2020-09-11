@@ -8,14 +8,14 @@
 /**
  * 
  */
-class ADVGAMESPROGRAMMING_API Decorator : public Node
+class ADVGAMESPROGRAMMING_API FDecorator : public Node
 {
 public:
-	Decorator();
-	virtual ~Decorator();
-	void SetChild(Node Child);
-	bool HasChild();
-	virtual Status Update(Blackboard* blackboard) override;
+	FDecorator();
+	virtual ~FDecorator();
+	void SetChild(Node * Child);
+	static bool HasChild();
+	virtual EStatus Update(Blackboard* Blackboard) override;
 	Node child;
 	
 private:

@@ -3,11 +3,11 @@
 
 #include "Sequence.h"
 
-Sequence::Sequence()
+FSequence::FSequence()
 {
 }
 
-Sequence::~Sequence()
+FSequence::~FSequence()
 {
 }
 /*
@@ -15,15 +15,15 @@ void Sequence::OnInitialise()
 {
 }
 */
-Node::Status Sequence::Update(Blackboard* Blackboard)
+Node::EStatus FSequence::Update(Blackboard* Blackboard)
 {
     //Loop through children until a child returns failure or pass through all the children
     for (auto It = GetChildren().CreateIterator(); It; ++It)
     {
-        if ((*It).Update(Blackboard) == Status::Failure)
+        if ((*It).Update(Blackboard) == EStatus::Failure)
         {
-            return Status::Failure;
+            return EStatus::Failure;
         }
     }
-    return Status::Success;
+    return EStatus::Success;
 }

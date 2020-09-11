@@ -3,51 +3,64 @@
 
 #include "BehaviourTree.h"
 
-BehaviourTree::BehaviourTree()
+FBehaviourTree::FBehaviourTree()
 {
-    Sequence sequence1;
-    Sequence sequence2;
-    Sequence sequence3;
-    Selector selector;
-    HealthCheck healthCheck;
-    PlayerCheck playerCheck;
-    Charge charge;
-    Retreat retreat;
-    //Shoot shoot;
+    
+    //Initialise necessary nodes
+    FSequence Sequence1;
+    FSequence Sequence2;
+    FSequence Sequence3;
+    FSelector Selector1;
+    FHealthCheck HealthCheck1;
+    FPlayerCheck PlayerCheck1;
+    FCharge Charge1;
+    FRetreat Retreat1;
+    //Shoot Shoot;
 
-    sequence1.AddChildren(sequence2);
-    sequence1.AddChildren(sequence3);
-    sequence2.AddChildren(playerCheck);
+    //Create pointers to nodes to prevent object slicing when added as children
+    FSequence * Sequence2Ptr = &Sequence2;
+    FSequence * Sequence3Ptr = &Sequence3;
+    FSelector * Selector1Ptr = &Selector1;
+    FHealthCheck * HealthCheck1Ptr = &HealthCheck1;
+    FPlayerCheck * PlayerCheck1Ptr = &PlayerCheck1;
+    FCharge * Charge1Ptr = &Charge1;
+    FRetreat * Retreat1Ptr = &Retreat1;
+
+    //Adds nodes to the behaviour tree with appropriate hierarchy
+    Sequence1.AddChildren(Sequence2Ptr);
+    Sequence1.AddChildren(Sequence3Ptr);
+    Sequence2.AddChildren(PlayerCheck1Ptr);
     //sequence2.AddChildren(shoot);
-    sequence2.AddChildren(selector);
-    selector.AddChildren(healthCheck);
-    selector.AddChildren(charge);
-    healthCheck.SetChild(retreat);
-    SetRoot(sequence1);
+    Sequence2.AddChildren(Selector1Ptr);
+    Selector1.AddChildren(HealthCheck1Ptr);
+    Selector1.AddChildren(Charge1Ptr);
+    HealthCheck1.SetChild(Retreat1Ptr);
+    SetRoot(Sequence1);
 }
 
-BehaviourTree::~BehaviourTree()
+FBehaviourTree::~FBehaviourTree()
 {
 }
 
 //hard coded root to be a sequence
-void BehaviourTree::SetRoot(Sequence Root)
+void FBehaviourTree::SetRoot(const FSequence Root) const
 {
-    *root = Root;
+    *TreeRoot = Root;
 }
 
-void BehaviourTree::ClearNodes()
+//Removes all nodes from the behaviour tree
+void FBehaviourTree::ClearNodes()
 {
-    nodes.Empty();
+    Nodes.Empty();
 }
 
-void BehaviourTree::Run()
+void FBehaviourTree::Run() const
 {
     //while a certain condition hasn't been met e.g. player is dead
-    while (blackboard->playerHealth != 0)
+    while (Blackboard->playerHealth != 0)
     {
         //Update the behaviour tree
-        root->Update(blackboard);
+        TreeRoot->Update(Blackboard);
     }
 }
 

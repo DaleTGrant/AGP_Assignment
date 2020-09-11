@@ -3,13 +3,13 @@
 
 #include "Selector.h"
 
-Selector::Selector()
+FSelector::FSelector()
 {
     //CurrentChild = children.CreateConstIterator();
     
 }
 
-Selector::~Selector()
+FSelector::~FSelector()
 {
 }
 
@@ -19,17 +19,17 @@ void Selector::OnInitialise()
 }
 */
 
-Node::Status Selector::Update(Blackboard* blackboard)
+Node::EStatus FSelector::Update(Blackboard* Blackboard)
 {
     //Loop through children until a child returns success or pass through all the children
     for (auto It = GetChildren().CreateIterator(); It; ++It)
     {
-        if ((*It).Update(blackboard) == Status::Success)
+        if ((*It).Update(Blackboard) == EStatus::Success)
         {
-            return Status::Success;
+            return EStatus::Success;
         }
     }
-    return Status::Failure;
+    return EStatus::Failure;
     
     /*
     //Until a child is running

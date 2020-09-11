@@ -13,7 +13,7 @@ class ADVGAMESPROGRAMMING_API Node
 	public:
 	Node();
 	virtual ~Node();
-	enum class Status
+	enum class EStatus
 	{
 		Invalid,
         Success,
@@ -22,19 +22,19 @@ class ADVGAMESPROGRAMMING_API Node
      };
 
 	//Utility Functions
-	virtual bool IsStatus(Status status);
+	virtual bool IsStatus(EStatus Status);
 	virtual void Reset();
-	virtual void AddChildren(Node Child);
+	virtual void AddChildren(Node* Child);
 	virtual bool HasChildren();
 	virtual TArray<Node> GetChildren();
 	virtual void ClearChildren();
 
 	//Core Functions
-	virtual Status Update(Blackboard* Blackboard);
+	virtual EStatus Update(Blackboard* Blackboard);
 
 	private:
-	Status CurrentStatus;
-	TArray<Node> children;
+	EStatus CurrentStatus;
+	TArray<Node> Children;
 };
 
 	

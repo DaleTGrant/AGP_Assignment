@@ -14,17 +14,17 @@
 /**
  * 
  */
-class ADVGAMESPROGRAMMING_API BehaviourTree
+class ADVGAMESPROGRAMMING_API FBehaviourTree
 {
 public:
-	BehaviourTree();
-	~BehaviourTree();
-	void SetRoot(Sequence Root);
+	FBehaviourTree();
+	~FBehaviourTree();
+	void SetRoot(FSequence Root) const;
 	void ClearNodes();
-	void Run();
+	void Run() const;
 
 private:
-	Sequence* root;
-	TArray<Node> nodes;
-	Blackboard* blackboard;
+	FSequence* TreeRoot;
+	TArray<Node> Nodes;
+	Blackboard* Blackboard;
 };

@@ -5,47 +5,53 @@
 
 Node::Node()
 {
-    CurrentStatus = Status::Invalid;
+    CurrentStatus = EStatus::Invalid;
 }
 
 Node::~Node()
 {
 }
 
-bool Node::IsStatus(Status Status)
+//Returns the status of the current node
+bool Node::IsStatus(EStatus Status)
 {
     return CurrentStatus == Status;
 }
 
+//Resets the status of the current node
 void Node::Reset()
 {
-    CurrentStatus = Status::Invalid;
+    CurrentStatus = EStatus::Invalid;
 }
 
-void Node::AddChildren(Node Child)
+//Adds a child to the node's children
+void Node::AddChildren(Node* Child)
 {
-    children.Push(Child);
+    Children.Push(*Child);
 }
 
+//Checks whether the node has children
 bool Node::HasChildren()
 {
-    if (children.Num() != 0)
+    if (Children.Num() != 0)
         return true;
     
     return false;
 }
 
+//Returns the children of the node
 TArray<Node> Node::GetChildren()
 {
-    return children;
+    return Children;
 }
 
+//Removes all children from the node
 void Node::ClearChildren()
 {
-    children.Empty();
+    Children.Empty();
 }
 
-Node::Status Node::Update(Blackboard* Blackboard)
+Node::EStatus Node::Update(Blackboard* Blackboard)
 {
     return CurrentStatus;
 }

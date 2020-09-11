@@ -7,33 +7,47 @@
  * player chooses the closest node to the player as a destination and heads towards it
  * if the player has reached that node then return 'success', otherwise return 'running'
  */
-Node::Status Charge::Update(Blackboard* blackboard)
+Node::EStatus FCharge::Update(Blackboard* Blackboard)
 {
-    blackboard->EnemyAI[0]->AgentEngage();
-    if (blackboard->EnemyAI[0]->Manager->FindNearestNode(blackboard->EnemyAI[0]->DetectedActor->GetActorLocation())
-        == blackboard->EnemyAI[0]->CurrentNode) return Status::Success;
-    return Status::Running;
+    Blackboard->EnemyAI[0]->AgentEngage();
+    if (Blackboard->EnemyAI[0]->Manager->FindNearestNode(Blackboard->EnemyAI[0]->DetectedActor->GetActorLocation())
+        == Blackboard->EnemyAI[0]->CurrentNode) return EStatus::Success;
+    return EStatus::Running;
 }
 
 /*
 * player chooses the furthest node to the player as a destination and heads towards it
 * if the player has reached that node then return 'success', otherwise return 'running'
 */
-Node::Status Retreat::Update(Blackboard* blackboard)
+Node::EStatus FRetreat::Update(Blackboard* Blackboard)
 {
-    blackboard->EnemyAI[0]->AgentEvade();
-    if (blackboard->EnemyAI[0]->Manager->FindFurthestNode(blackboard->EnemyAI[0]->DetectedActor->GetActorLocation())
+    Blackboard->EnemyAI[0]->AgentEvade();
+    if (Blackboard->EnemyAI[0]->Manager->FindFurthestNode(Blackboard->EnemyAI[0]->DetectedActor->GetActorLocation())
+        == Blackboard->EnemyAI[0]->CurrentNode) return EStatus::Success;
+    return EStatus::Running;
+}
+
+/*
+ * player chooses a random node as a destination and heads towards it
+ * if the player has reached that node then return 'success', otherwise return 'running'
+ */
+Node::EStatus FPatrol::Update(Blackboard* Blackboard)
+{
+    /*
+    blackboard->EnemyAI[0]->AgentPatrol();
+    if (blackboard->EnemyAI[0]->Manager->AllNodes[FMath::RandRange(0, blackboard->EnemyAI[0]->Manager->AllNodes.Num() - 1)])
         == blackboard->EnemyAI[0]->CurrentNode) return Status::Success;
-    return Status::Running;
+        */
+    return EStatus::Running;
 }
 
 /*
 * if the player is visible to the AI then return 'success' otherwise return 'failure'
 */
-Node::Status PlayerCheck::Update(Blackboard* blackboard)
+Node::EStatus FPlayerCheck::Update(Blackboard* Blackboard)
 {
-    if (blackboard->IsPlayerVisible()) return Status::Success;
-    return Status::Failure;
+    if (Blackboard->IsPlayerVisible()) return EStatus::Success;
+    return EStatus::Failure;
 }
 
 /*
@@ -49,10 +63,10 @@ Node::Status Shoot::Update(Blackboard* blackboard)
 * this decorator will check if the AI's health is below a defined threshold
 * if it is, then run the child node, otherwise return 'failure'
 */
-Node::Status HealthCheck::Update(Blackboard* blackboard)
+Node::EStatus FHealthCheck::Update(Blackboard* Blackboard)
 {
-    if (blackboard->AIHealth < blackboard->AIThreshold) return child.Update(blackboard);
-    return Status::Failure;
+    if (Blackboard->AIHealth < Blackboard->AIThreshold) return child.Update(Blackboard);
+    return EStatus::Failure;
 }
 
 /*
@@ -60,14 +74,16 @@ Node::Status HealthCheck::Update(Blackboard* blackboard)
 * once that event occurs, it itself will return 'success'
 */
 //NOTE: this current repeater will loop even if the AI gets health back
-Node::Status Repeater::Update(Blackboard* blackboard)
+Node::EStatus FRepeater::Update(Blackboard* Blackboard)
 {
-    while (child.Update(blackboard) != Status::Success)
+    while (child.Update(Blackboard) != EStatus::Success)
         {
-            child.Update(blackboard);
+            child.Update(Blackboard);
         }
-    return Status::Success;
+    return EStatus::Success;
 }
+
+
 
 
 

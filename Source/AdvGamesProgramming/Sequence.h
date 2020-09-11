@@ -8,11 +8,11 @@
 /**
  * 
  */
-class ADVGAMESPROGRAMMING_API Sequence : public Composite
+class ADVGAMESPROGRAMMING_API FSequence : public Composite
 {
 public:
-	Sequence();
-	~Sequence();
+	FSequence();
+	~FSequence();
 	//virtual void OnInitialise() override;
-	virtual Status Update(Blackboard* Blackboard) override;
+	virtual EStatus Update(Blackboard* Blackboard) override;
 };
