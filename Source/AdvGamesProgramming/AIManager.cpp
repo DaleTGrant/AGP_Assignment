@@ -199,7 +199,8 @@ TArray<ANavigationNode*> AAIManager::SearchHorizontal(ANavigationNode* ParentNod
 				}
 			}
 		}
-		
+
+		// If there are forced neighbours, then this node is a jump point
 		if(ForcedNeighbourList.Num()>0)
 		{
 			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
@@ -221,6 +222,7 @@ TArray<ANavigationNode*> AAIManager::SearchHorizontal(ANavigationNode* ParentNod
 	return JumpPointNodes;
 }
 
+// Same as horizontal search but vertically
 TArray<ANavigationNode*> AAIManager::SearchVertical(ANavigationNode* ParentNode, ANavigationNode* EndNode,
 	float VertDir, float Dist)
 {
@@ -319,6 +321,11 @@ TArray<ANavigationNode*> AAIManager::SearchVertical(ANavigationNode* ParentNode,
 	return JumpPointNodes;
 }
 
+// Search Diagonally for jump points, First it checks if it has a diagonal point to expand to.
+// First checks for forced neighbours around new diagonal node
+// If it finds any, adds them to jump node list to expand on later
+// If none are found, then search horizontally and vertically for more jump points
+// If there are forced neighbours, this node is also a jump point itself, so send it to the open list for further expansion
 TArray<ANavigationNode*> AAIManager::SearchDiagonal(ANavigationNode* ParentNode, ANavigationNode* EndNode, float HorDir,
 	float VertDir, float Dist)
 {
