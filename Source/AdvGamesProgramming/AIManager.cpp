@@ -16,9 +16,14 @@ AAIManager::AAIManager()
 
 	AllowedAngle = 0.4f;
 	bSteepnessPreventConnection = true;
+	bIsRandomSpawnBlockers = true;
+	RandomSpawnBlockerRate = 0.1f;
 
 	Heuristic = EHeuristicType::EUCLIDEAN;
 	Pathfinding = EPathfindingType::A_STAR;
+
+	bIsRandomSpawn = true;
+	SpawnIndex = 0;
 }
 
 // Called when the game starts or when spawned
@@ -65,6 +70,9 @@ TArray<ANavigationNode*> AAIManager::GenerateJPSPath(ANavigationNode* StartNode,
 	StartNode->GScore = 0;
 	StartNode->HScore = CalculateHeuristic(StartNode->GetActorLocation(), EndNode->GetActorLocation());
 
+	// Choose an available direction to begin search
+	StartNode->DirectionFromParentToNode = StartNode->ConnectedNodes[0]->GridLocation - StartNode->GridLocation;
+
 	OpenSet.Add(StartNode);
 	
 	while (OpenSet.Num() > 0)
@@ -96,43 +104,465 @@ TArray<ANavigationNode*> AAIManager::GenerateJPSPath(ANavigationNode* StartNode,
 		}
 
 		// For the current node, identify the neighbours, see if new G-score better than current one
-		
-		for (ANavigationNode* ConnectedNode : CurrentNode->ConnectedNodes)
+		TArray<ANavigationNode*> JumpNodes = SearchDiagonal(CurrentNode,EndNode,CurrentNode->DirectionFromParentToNode.X,CurrentNode->DirectionFromParentToNode.Y,CurrentNode->GScore);
+		for(ANavigationNode* JumpNode : JumpNodes)
 		{
-			float TentativeGScore = CurrentNode->GScore + CalculateHeuristic(CurrentNode->GetActorLocation(), ConnectedNode->GetActorLocation());
-			if (TentativeGScore < ConnectedNode->GScore)
+			if(!OpenSet.Contains(JumpNode))
 			{
-				ConnectedNode->CameFrom = CurrentNode;
-				ConnectedNode->GScore = TentativeGScore;
-				ConnectedNode->HScore = CalculateHeuristic(ConnectedNode->GetActorLocation(),EndNode->GetActorLocation());
-				if (!OpenSet.Contains(ConnectedNode))
-				{
-					OpenSet.Add(ConnectedNode);
-				}
+				OpenSet.Add(JumpNode);
 			}
 		}
 	}
-	UE_LOG(LogTemp, Error, TEXT("NO PATH FOUND"));
+	// UE_LOG(LogTemp, Error, TEXT("NO PATH FOUND"));
 	return TArray<ANavigationNode*>();
 }
 
-void AAIManager::IdentifyJpsSuccessors(TArray<ANavigationNode*>& OpenSet, ANavigationNode*& CurrentNode, ANavigationNode* EndNode)
+// Searches for jump points iteratively horizontally along the grid
+TArray<ANavigationNode*> AAIManager::SearchHorizontal(ANavigationNode* ParentNode, ANavigationNode* EndNode, float HorDir, float Dist)
 {
-	// // For the current node, identify the neighbours, see if new G-score better than current one
-	// for (ANavigationNode* ConnectedNode : CurrentNode->ConnectedNodes)
-	// {
-	// 	float TentativeGScore = CurrentNode->GScore + CalculateHeuristic(CurrentNode->GetActorLocation(), ConnectedNode->GetActorLocation());
-	// 	if (TentativeGScore < ConnectedNode->GScore)
-	// 	{
-	// 		ConnectedNode->CameFrom = CurrentNode;
-	// 		ConnectedNode->GScore = TentativeGScore;
-	// 		ConnectedNode->HScore = CalculateHeuristic(ConnectedNode->GetActorLocation(),EndNode->GetActorLocation());
-	// 		if (!OpenSet.Contains(ConnectedNode))
-	// 		{
-	// 			OpenSet.Add(ConnectedNode);
-	// 		}
-	// 	}
-	// }
+	ANavigationNode* StartNode = ParentNode;
+	FVector2D ParentDir = FVector2D(HorDir,0);
+	ANavigationNode* ExpandingNode = StartNode;
+	TArray<ANavigationNode*> JumpPointNodes;
+	TArray<FVector2D> JumpPointDirFromParent;
+
+	FVector2D NextLocation = StartNode->GridLocation;
+
+	// if no jump points have been found
+	while(JumpPointNodes.Num()==0)
+	{
+		// Iterate to next node to check
+		NextLocation = ParentDir+NextLocation;
+		ANavigationNode* Temp = nullptr;
+		for(ANavigationNode* node :ExpandingNode->AllConnectedNodes)
+		{
+			if(node->GridLocation==NextLocation)
+			{
+				if(node->bIsTraversible)
+				{
+					Temp = node;
+					break;
+				}
+				// If hit a wall, return empty list
+				return TArray<ANavigationNode*>();
+			}
+		}
+		ExpandingNode = Temp;
+
+		// If leave the grid, end iteration
+		if(NextLocation.X < 0 || NextLocation.X >=GridWidth)
+		{
+			return TArray<ANavigationNode*>();
+		}
+		if(NextLocation.Y < 0 || NextLocation.Y >=GridHeight)
+		{
+			return TArray<ANavigationNode*>();
+		}
+		
+		// If we reach destination on the next step, we want to travel here, store as jump and break
+		if(ExpandingNode==EndNode)
+		{
+			// If better path, set parent to this jump point
+			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+			if(ng < ExpandingNode->GScore)
+			{
+				ExpandingNode->GScore = ng;
+				ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+				ExpandingNode->CameFrom = ParentNode;
+				ExpandingNode->DirectionFromParentToNode = ParentDir;
+			}
+			JumpPointNodes.Add(ExpandingNode);
+			// JumpPointDirFromParent.Add(ParentDir);
+			return JumpPointNodes;
+		}
+
+		// Check for forced neighbours around the expanded point
+		TArray<ANavigationNode*>ForcedNeighbourList = ForcedNeighbours(ExpandingNode,ParentDir);
+		// If some have been found, add them to the jump point list if they are improvements to the existing path
+		if(ForcedNeighbourList.Num()>0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Force Neighbour Found"));
+			for(ANavigationNode* Jump:ForcedNeighbourList)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Forced Neighbour Name: %s"),*Jump->GetName());
+				
+				float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+				if(ng < ExpandingNode->GScore)
+				{
+					ExpandingNode->GScore = ng;
+					ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+					ExpandingNode->CameFrom = ParentNode;
+					ExpandingNode->DirectionFromParentToNode = Jump->GridLocation - ExpandingNode->GridLocation;
+
+					JumpPointNodes.Add(ExpandingNode);
+					JumpPointDirFromParent.Add(Jump->GridLocation - ExpandingNode->GridLocation);
+				}
+			}
+		}
+		
+		if(ForcedNeighbourList.Num()>0)
+		{
+			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+			if(ng < ExpandingNode->GScore)
+			{
+				ExpandingNode->GScore = ng;
+				ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+				ExpandingNode->CameFrom = ParentNode;
+				ExpandingNode->DirectionFromParentToNode = ParentDir;
+
+				JumpPointNodes.Add(ExpandingNode);
+				JumpPointDirFromParent.Add(ParentDir);
+			}
+			
+			return JumpPointNodes;
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("End of loop break"));
+	return JumpPointNodes;
+}
+
+TArray<ANavigationNode*> AAIManager::SearchVertical(ANavigationNode* ParentNode, ANavigationNode* EndNode,
+	float VertDir, float Dist)
+{
+	ANavigationNode* StartNode = ParentNode;
+	FVector2D ParentDir = FVector2D(0,VertDir);
+	ANavigationNode* ExpandingNode = StartNode;
+	TArray<ANavigationNode*> JumpPointNodes;
+	TArray<FVector2D> JumpPointDirFromParent;
+
+	FVector2D NextLocation = StartNode->GridLocation;
+	
+	while(JumpPointNodes.Num()==0)
+	{
+		NextLocation = ParentDir+NextLocation;
+		ANavigationNode* Temp = nullptr;
+		for(ANavigationNode* node :ExpandingNode->AllConnectedNodes)
+		{
+			if(node->GridLocation==NextLocation)
+			{
+				if(node->bIsTraversible)
+				{
+					Temp = node;
+					break;
+				}
+				// If hit a wall, return empty list
+				return TArray<ANavigationNode*>();
+			}
+		}
+		ExpandingNode = Temp;
+		
+		if(NextLocation.X < 0 || NextLocation.X >=GridWidth)
+		{
+			return TArray<ANavigationNode*>();
+		}
+		if(NextLocation.Y < 0 || NextLocation.Y >=GridHeight)
+		{
+			return TArray<ANavigationNode*>();
+		}
+		// If we reach destination next step, we want to travel here, store as jump and break
+		if(ExpandingNode==EndNode)
+		{
+			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+			if(ng < ExpandingNode->GScore)
+			{
+				ExpandingNode->GScore = ng;
+				ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+				ExpandingNode->CameFrom = ParentNode;
+				ExpandingNode->DirectionFromParentToNode = ParentDir;
+			}
+			JumpPointNodes.Add(ExpandingNode);
+			// JumpPointDirFromParent.Add(ParentDir);
+			return JumpPointNodes;
+		}
+
+		// Check for forced neighbours around the expanded point
+		TArray<ANavigationNode*>ForcedNeighbourList = ForcedNeighbours(ExpandingNode,ParentDir);
+		if(ForcedNeighbourList.Num()>0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Force Neighbour Found"));
+			for(ANavigationNode* Jump:ForcedNeighbourList)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Forced Neighbour Name: %s"),*Jump->GetName());
+				
+				float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+				if(ng < ExpandingNode->GScore)
+				{
+					ExpandingNode->GScore = ng;
+					ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+					ExpandingNode->CameFrom = ParentNode;
+					ExpandingNode->DirectionFromParentToNode = Jump->GridLocation - ExpandingNode->GridLocation;
+
+					JumpPointNodes.Add(ExpandingNode);
+					JumpPointDirFromParent.Add(Jump->GridLocation - ExpandingNode->GridLocation);
+				}
+			}
+		}
+		
+		if(ForcedNeighbourList.Num()>0)
+		{
+			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+			if(ng < ExpandingNode->GScore)
+			{
+				ExpandingNode->GScore = ng;
+				ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+				ExpandingNode->CameFrom = ParentNode;
+				ExpandingNode->DirectionFromParentToNode = ParentDir;
+
+				JumpPointNodes.Add(ExpandingNode);
+				JumpPointDirFromParent.Add(ParentDir);
+			}
+			
+			return JumpPointNodes;
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("End of loop break"));
+	return JumpPointNodes;
+}
+
+TArray<ANavigationNode*> AAIManager::SearchDiagonal(ANavigationNode* ParentNode, ANavigationNode* EndNode, float HorDir,
+	float VertDir, float Dist)
+{
+	ANavigationNode* StartNode = ParentNode;
+	FVector2D ParentDir = FVector2D(HorDir,VertDir);
+	ANavigationNode* ExpandingNode = StartNode;
+	TArray<ANavigationNode*> JumpPointNodes;
+	TArray<FVector2D> JumpPointDirFromParent;
+
+	bool bHorSearchDone = false;
+	bool bVertSearchDone = false;
+	
+
+	FVector2D NextLocation = StartNode->GridLocation;
+	
+	while(JumpPointNodes.Num()==0)
+	{
+		NextLocation = ParentDir+NextLocation;
+		ANavigationNode* Temp = nullptr;
+		for(ANavigationNode* node :ExpandingNode->AllConnectedNodes)
+		{
+			if(node->GridLocation==NextLocation)
+			{
+				if(node->bIsTraversible)
+				{
+					Temp = node;
+					break;
+				}
+				// If hit a wall, return empty list
+				return TArray<ANavigationNode*>();
+			}
+		}
+		ExpandingNode = Temp;
+		
+		if(NextLocation.X < 0 || NextLocation.X >=GridWidth)
+		{
+			return TArray<ANavigationNode*>();
+		}
+		if(NextLocation.Y < 0 || NextLocation.Y >=GridHeight)
+		{
+			return TArray<ANavigationNode*>();
+		}
+		// If we reach destination next step, we want to travel here, store as jump and break
+		if(ExpandingNode==EndNode)
+		{
+			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+			if(ng < ExpandingNode->GScore)
+			{
+				ExpandingNode->GScore = ng;
+				ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+				ExpandingNode->CameFrom = ParentNode;
+				ExpandingNode->DirectionFromParentToNode = ParentDir;
+			}
+			JumpPointNodes.Add(ExpandingNode);
+			// JumpPointDirFromParent.Add(ParentDir);
+			return JumpPointNodes;
+		}
+
+		// Check for forced neighbours around the expanded point
+		TArray<ANavigationNode*>ForcedNeighbourList = ForcedNeighbours(ExpandingNode,ParentDir);
+		if(ForcedNeighbourList.Num()>0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Force Neighbour Found"));
+			for(ANavigationNode* Jump:ForcedNeighbourList)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Forced Neighbour Name: %s"),*Jump->GetName());
+				
+				float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+				if(ng < ExpandingNode->GScore)
+				{
+					ExpandingNode->GScore = ng;
+					ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+					ExpandingNode->CameFrom = ParentNode;
+					ExpandingNode->DirectionFromParentToNode = Jump->GridLocation - ExpandingNode->GridLocation;
+
+					JumpPointNodes.Add(ExpandingNode);
+					JumpPointDirFromParent.Add(Jump->GridLocation - ExpandingNode->GridLocation);
+				}
+			}
+		}
+		bHorSearchDone = false;
+		bVertSearchDone = false;
+
+		if(JumpPointNodes.Num()==0)
+		{
+			TArray<ANavigationNode*> SubNodes = SearchHorizontal(ExpandingNode,EndNode,HorDir,Dist);
+			bHorSearchDone = true;
+			if(SubNodes.Num()>0)
+			{
+				JumpPointNodes.Add(SubNodes.Last());
+			}
+		}
+
+		if(JumpPointNodes.Num()==0)
+		{
+			TArray<ANavigationNode*> SubNodes = SearchVertical(ExpandingNode,EndNode,VertDir,Dist);
+			bVertSearchDone = true;
+			if(SubNodes.Num()>0)
+			{
+				JumpPointNodes.Add(SubNodes.Last());
+			}
+		}
+		
+		if(ForcedNeighbourList.Num()>0)
+		{
+			float ng = ParentNode->GScore + CalculateHeuristic(ParentNode->GetActorLocation(),ExpandingNode->GetActorLocation());
+			if(ng < ExpandingNode->GScore)
+			{
+				ExpandingNode->GScore = ng;
+				ExpandingNode->HScore = CalculateHeuristic(ExpandingNode->GetActorLocation(),EndNode->GetActorLocation());
+				ExpandingNode->CameFrom = ParentNode;
+				ExpandingNode->DirectionFromParentToNode = ParentDir;
+
+				JumpPointNodes.Add(ExpandingNode);
+				JumpPointDirFromParent.Add(ParentDir);
+			}
+			
+			return JumpPointNodes;
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("End of loop break"));
+	return JumpPointNodes;
+}
+
+// Method prunes the neighbouring nodes around the currently considered node
+// returns traversible nodes in direction of travel from parent node (Natural Neighbours)
+// i.e. if Parent Dir = (1,1) returns traversible nodes in (1,1), (1,0), (0,1) directions 
+
+TArray<ANavigationNode*> AAIManager::PruneNeighbours(ANavigationNode* CurrentNode, FVector2D ParentDir)
+{
+	// If no parent direction (start node), then return all traversible neighbours
+	if(ParentDir == FVector2D::ZeroVector)
+	{
+		return CurrentNode->ConnectedNodes;
+	}
+
+	TArray<ANavigationNode*> NaturalNeighbours;
+	
+	for(int i=0;i<(CurrentNode->AllConnectedDir).Num();++i)
+	{
+		FVector2D ConsideredDir = CurrentNode->AllConnectedDir[i];
+		ANavigationNode* ConsideredNode = CurrentNode->AllConnectedNodes[i];
+		if(ConsideredNode->bIsTraversible)
+		{
+			if(ParentDir == ConsideredDir)
+			{
+				NaturalNeighbours.Add(ConsideredNode);
+			}
+			else if(ParentDir.X == ConsideredDir.X && ConsideredDir.Y ==0)
+			{
+				NaturalNeighbours.Add(ConsideredNode);
+			}
+			else if(ParentDir.Y == ConsideredDir.Y && ConsideredDir.X ==0)
+			{
+				NaturalNeighbours.Add(ConsideredNode);
+			}
+		}
+	}
+	return NaturalNeighbours;
+}
+
+// When considering a new node to expand, searches for "Forced Neighbours".
+// These are nodes that require pathing through the new node to reach from the parent node
+TArray<ANavigationNode*> AAIManager::ForcedNeighbours(ANavigationNode* CurrentNode, FVector2D ParentDir)
+{
+	TArray<ANavigationNode*> ForcedNeighbours;
+	if(CurrentNode->ConnectedNonTraversableNodes.Num()==0)
+	{
+		return TArray<ANavigationNode*>();
+	}
+	
+	for(int i=0;i<(CurrentNode->AllConnectedDir).Num();++i)
+	{
+		FVector2D ConsideredDir = CurrentNode->AllConnectedDir[i];
+		ANavigationNode* ConsideredNode = CurrentNode->AllConnectedNodes[i];
+
+		// If parent from diagonal
+		if(abs(ParentDir.X)==abs(ParentDir.Y))
+		{
+			if(ConsideredDir==FVector2D(-ParentDir.X,0)||ConsideredDir==FVector2D(0,-ParentDir.Y))
+			{
+				if(!ConsideredNode->bIsTraversible)
+				{
+					for(int j=0;j<(CurrentNode->AllConnectedDir).Num();++j)
+					{
+						FVector2D PossibleForcedNodeDir = CurrentNode->AllConnectedDir[j];
+						if(PossibleForcedNodeDir == ParentDir+ 2*ConsideredDir)
+						{
+							 ANavigationNode* PossibleForcedNode = CurrentNode->AllConnectedNodes[j];
+							if(PossibleForcedNode->bIsTraversible)
+							{
+								ForcedNeighbours.Add(PossibleForcedNode);
+							}
+						}
+					}
+				}
+			}	
+		}
+		// If parent from horizontal
+		if(abs(ParentDir.X)==1 && ParentDir.Y== 0)
+		{
+			if((ConsideredDir.X==0) && ConsideredDir.Y !=0)
+			{
+				if(!ConsideredNode->bIsTraversible)
+				{
+					for(int j=0;j<(CurrentNode->AllConnectedDir).Num();++j)
+					{
+						FVector2D PossibleForcedNodeDir = CurrentNode->AllConnectedDir[j];
+						if(PossibleForcedNodeDir == ParentDir + ConsideredDir)
+						{
+							ANavigationNode* PossibleForcedNode = CurrentNode->AllConnectedNodes[j];
+							if(PossibleForcedNode->bIsTraversible)
+							{
+								ForcedNeighbours.Add(PossibleForcedNode);
+							}
+						}
+					}
+				}
+			}	
+		}
+		// If parent is from vertical direction
+		if(ParentDir.X==0 && abs(ParentDir.Y)== 1)
+		{
+			if(ConsideredDir.Y==0 && ConsideredDir.X !=0)
+			{
+				if(!ConsideredNode->bIsTraversible)
+				{
+					for(int j=0;j<(CurrentNode->AllConnectedDir).Num();++j)
+					{
+						FVector2D PossibleForcedNodeDir = CurrentNode->AllConnectedDir[j];
+						if(PossibleForcedNodeDir == ParentDir + ConsideredDir)
+						{
+							ANavigationNode* PossibleForcedNode = CurrentNode->AllConnectedNodes[j];
+							if(PossibleForcedNode->bIsTraversible)
+							{
+								ForcedNeighbours.Add(PossibleForcedNode);
+							}
+						}
+					}
+				}
+			}	
+		}
+	}
+	return ForcedNeighbours;
 }
 
 TArray<ANavigationNode*> AAIManager::GenerateAStarPath(ANavigationNode* StartNode, ANavigationNode* EndNode)
@@ -176,7 +606,7 @@ TArray<ANavigationNode*> AAIManager::GenerateAStarPath(ANavigationNode* StartNod
 
 		for (ANavigationNode* ConnectedNode : CurrentNode->ConnectedNodes)
 		{
-			float TentativeGScore = CurrentNode->GScore + FVector::Distance(CurrentNode->GetActorLocation(), ConnectedNode->GetActorLocation());
+			float TentativeGScore = CurrentNode->GScore + CalculateHeuristic(CurrentNode->GetActorLocation(), ConnectedNode->GetActorLocation());
 			if (TentativeGScore < ConnectedNode->GScore)
 			{
 				ConnectedNode->CameFrom = CurrentNode;
@@ -237,7 +667,11 @@ void AAIManager::CreateAgents()
 {
 	for (int32 i = 0; i < NumAI; i++)
 	{
-		int32 RandIndex = FMath::RandRange(0, AllTraversableNodes.Num()-1);
+		int32 RandIndex = SpawnIndex;
+		if(bIsRandomSpawn)
+		{
+			RandIndex = FMath::RandRange(0, AllTraversableNodes.Num()-1);
+		}
 		AEnemyCharacter* Agent = GetWorld()->SpawnActor<AEnemyCharacter>(AgentToSpawn, AllTraversableNodes[RandIndex]->GetActorLocation(), FRotator(0.f, 0.f, 0.f));
 		Agent->Manager = this;
 		Agent->CurrentNode = AllTraversableNodes[RandIndex];
@@ -255,6 +689,9 @@ void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int
 		It->Destroy();
 	}
 
+	GridWidth = (float)Width;
+	GridHeight = (float)Height;
+
 	for (int32 Col = 0; Col < Width; Col++)
 	{
 		for (int32 Row = 0; Row < Height; Row++)
@@ -263,6 +700,19 @@ void AAIManager::GenerateNodes(const TArray<FVector>& Vertices, int32 Width, int
 			ANavigationNode* Node = GetWorld()->SpawnActor<ANavigationNode>(Vertices[Row * Width + Col], FRotator::ZeroRotator, FActorSpawnParameters());
 			AllNodes.Add(Node);
 			Node->GridLocation = FVector2D(Col,Row);
+			if(bIsRandomSpawnBlockers)
+			{
+				Node->bIsTraversible = FMath::FRand()>RandomSpawnBlockerRate;
+			}
+			if(Col==0 ||Col ==Width-1)
+			{
+				Node->bIsTraversible = false;
+			}
+			if(Row==0 ||Row ==Width-1)
+			{
+				Node->bIsTraversible = false;
+			}
+			
 			if(Node->bIsTraversible)
 			{
 				AllTraversableNodes.Add(Node);

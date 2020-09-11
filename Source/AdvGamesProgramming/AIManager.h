@@ -47,23 +47,40 @@ public:
 	EPathfindingType Pathfinding;
 	UPROPERTY(EditAnywhere, Category="AI Properties")
 	int32 NumAI;
+	UPROPERTY(EditAnywhere, Category="AI Properties")
+	bool bIsRandomSpawn;
+	UPROPERTY(EditAnywhere, Category="AI Properties")
+	int32 SpawnIndex;
 	UPROPERTY(VisibleAnywhere, Category = "Navigation Nodes")
 	TArray<ANavigationNode*> AllNodes;
 	UPROPERTY(VisibleAnywhere, Category = "Navigation Nodes")
 	TArray<ANavigationNode*> AllTraversableNodes;
 	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
 	bool bSteepnessPreventConnection;
+	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
+	bool bIsRandomSpawnBlockers;
+	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
+	float RandomSpawnBlockerRate;
 	UPROPERTY(VisibleAnywhere, Category = "Agents")
 	TArray<AEnemyCharacter*> AllAgents;
 	UPROPERTY(EditAnywhere, Category = "Agents")
 	TSubclassOf<AEnemyCharacter> AgentToSpawn;
+	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
+	float GridWidth;
+	UPROPERTY(EditAnywhere, Category = "Navigation Nodes")
+	float GridHeight;
 
 	TArray<ANavigationNode*> GeneratePath(ANavigationNode* StartNode, ANavigationNode* EndNode);
 
 	TArray<ANavigationNode*> GenerateJPSPath(ANavigationNode* StartNode, ANavigationNode* EndNode);
 	TArray<ANavigationNode*> GenerateAStarPath(ANavigationNode* StartNode, ANavigationNode* EndNode);
 	float CalculateHeuristic(FVector CurrentLocation, FVector GoalLocation);
-	void IdentifyJpsSuccessors(TArray<ANavigationNode*>& OpenSet, ANavigationNode*& CurrentNode, ANavigationNode* EndNode);
+
+	TArray<ANavigationNode*> SearchHorizontal(ANavigationNode* ParentNode,ANavigationNode* EndNode,float HorDir, float Dist);
+	TArray<ANavigationNode*> SearchVertical(ANavigationNode* ParentNode,ANavigationNode* EndNode,float VertDir, float Dist);
+	TArray<ANavigationNode*> SearchDiagonal(ANavigationNode* ParentNode,ANavigationNode* EndNode,float HorDir, float VertDir, float Dist);
+	TArray<ANavigationNode*> PruneNeighbours(ANavigationNode* CurrentNode, FVector2D ParentDir);
+	TArray<ANavigationNode*> ForcedNeighbours(ANavigationNode* CurrentNode, FVector2D ParentDir);
 
 	/**
 	Finds the nearest navigation node from the given location.

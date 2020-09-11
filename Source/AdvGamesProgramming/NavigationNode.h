@@ -34,6 +34,8 @@ public:
 	TArray<FVector2D> AllConnectedDir;
 	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
 	FVector2D GridLocation;
+	UPROPERTY(EditAnywhere, Category = "Connected Nodes")
+	FVector2D DirectionFromParentToNode;
 	
 	USceneComponent* LocationComponent;
 

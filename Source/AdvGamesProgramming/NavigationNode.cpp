@@ -23,7 +23,7 @@ ANavigationNode::ANavigationNode()
 	FinalHeight = 250.0f;
 	FinalWidth = 250.0f;
 
-	bIsTraversible = FMath::FRand()>0.1f;
+	// bIsTraversible = FMath::FRand()>0.1f;
 	
 	BlockerMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Blocker Mesh"));
 	BlockerMesh->SetStaticMesh(nullptr);
